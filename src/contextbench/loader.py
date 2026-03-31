@@ -63,6 +63,11 @@ def _discover_in_directory(directory: str) -> list[str]:
             for md_file in sorted(rules_dir.glob("**/*.md")):
                 found.append(str(md_file))
 
+    # If directory itself contains .md files (e.g., passing rules/ directly)
+    if not found:
+        for md_file in sorted(base.glob("*.md")):
+            found.append(str(md_file))
+
     return found
 
 
