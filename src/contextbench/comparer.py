@@ -2,7 +2,12 @@
 
 from contextbench.diagnoser import diagnose
 from contextbench.loader import load_context_files
-from contextbench.models import ComparisonReport
+from contextbench.models import ComparisonReport, Issue
+
+
+def _issue_key(issue: Issue) -> tuple:
+    """Create a stable comparison key for an issue."""
+    return (issue.issue_type.value, issue.severity.value, tuple(sorted(issue.locations)))
 
 
 def compare_versions(
@@ -15,11 +20,14 @@ def compare_versions(
     before_report = diagnose(before_files, model)
     after_report = diagnose(after_files, model)
 
-    before_titles = {i.title for i in before_report.issues}
-    after_titles = {i.title for i in after_report.issues}
+    before_keys = {_issue_key(i): i.title for i in before_report.issues}
+    after_keys = {_issue_key(i): i.title for i in after_report.issues}
 
-    improvements = tuple(sorted(before_titles - after_titles))
-    regressions = tuple(sorted(after_titles - before_titles))
+    resolved_keys = set(before_keys) - set(after_keys)
+    new_keys = set(after_keys) - set(before_keys)
+
+    improvements = tuple(sorted(before_keys[k] for k in resolved_keys))
+    regressions = tuple(sorted(after_keys[k] for k in new_keys))
 
     return ComparisonReport(
         before=before_report,

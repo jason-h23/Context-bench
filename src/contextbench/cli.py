@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from contextbench import __version__
 from contextbench.comparer import compare_versions
-from contextbench.diagnoser import diagnose, diagnose_local_only
+from contextbench.diagnoser import diagnose
 from contextbench.formatter import format_json, format_markdown, format_terminal
 from contextbench.loader import load_context_files
 from contextbench.tokenizer import count_tokens_by_section
@@ -36,7 +36,7 @@ def cli():
     _load_env()
 
 
-@cli.command()
+@cli.command(name="diagnose")
 @click.argument("paths", nargs=-1, required=True, type=click.Path(exists=True))
 @click.option("--format", "-f", "fmt", type=click.Choice(["terminal", "markdown", "json"]),
               default="terminal", help="Output format")
@@ -59,10 +59,7 @@ def diagnose_cmd(paths, fmt, output, model, no_llm):
         click.echo("No context files found.")
         return
 
-    if no_llm:
-        report = diagnose_local_only(files)
-    else:
-        report = diagnose(files, model)
+    report = diagnose(files, model, use_llm=not no_llm)
 
     formatters = {"terminal": format_terminal, "markdown": format_markdown, "json": format_json}
     result = formatters[fmt](report)

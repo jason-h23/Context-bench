@@ -61,43 +61,38 @@ Instructions referencing tools, frameworks, or patterns not mentioned elsewhere,
 }}"""
 
 
-def diagnose(files: list[ContextFile], model: str = "claude-haiku-4-5-20251001") -> DiagnosisReport:
-    """Run full diagnosis: local checks + LLM analysis."""
+def diagnose(files: list[ContextFile], model: str = "claude-haiku-4-5-20251001", use_llm: bool = True) -> DiagnosisReport:
+    """Run diagnosis: local checks + optional LLM analysis."""
     if not files:
         return DiagnosisReport(summary="분석할 파일이 없습니다.")
 
     local_issues = find_local_issues(files)
-    llm_issues, summary, waste_pct = _run_llm_diagnosis(files, model)
+
+    llm_issues: list[Issue] = []
+    summary = ""
+    llm_waste_pct = 0.0
+
+    if use_llm:
+        llm_issues, summary, llm_waste_pct = _run_llm_diagnosis(files, model)
 
     all_issues = tuple(local_issues + llm_issues)
     total_tokens = sum(f.token_count for f in files)
     waste_tokens = sum(i.estimated_waste_tokens for i in all_issues)
-    waste_pct_calc = (waste_tokens / total_tokens * 100) if total_tokens > 0 else 0.0
+    waste_pct = (waste_tokens / total_tokens * 100) if total_tokens > 0 else 0.0
+
+    if not summary:
+        summary = f"{'로컬 + LLM' if use_llm else '로컬'} 검사 완료: {len(all_issues)}건 발견"
+        if not use_llm:
+            summary += " (LLM 분석 미실행)"
 
     return DiagnosisReport(
         files=tuple(files),
         issues=all_issues,
         total_tokens=total_tokens,
         estimated_waste_tokens=waste_tokens,
-        waste_percentage=max(waste_pct_calc, waste_pct),
+        waste_percentage=max(waste_pct, llm_waste_pct),
         summary=summary,
-        model_used=model,
-    )
-
-
-def diagnose_local_only(files: list[ContextFile]) -> DiagnosisReport:
-    """Run local checks only (no API call)."""
-    local_issues = tuple(find_local_issues(files))
-    total_tokens = sum(f.token_count for f in files)
-    waste_tokens = sum(i.estimated_waste_tokens for i in local_issues)
-
-    return DiagnosisReport(
-        files=tuple(files),
-        issues=local_issues,
-        total_tokens=total_tokens,
-        estimated_waste_tokens=waste_tokens,
-        waste_percentage=(waste_tokens / total_tokens * 100) if total_tokens > 0 else 0.0,
-        summary=f"로컬 검사 완료: {len(local_issues)}건 발견 (LLM 분석 미실행)",
+        model_used=model if use_llm else "local-only",
     )
 
 

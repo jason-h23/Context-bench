@@ -10,12 +10,20 @@ from contextbench.models import ContextFile, Issue, IssueType, Severity
 
 logger = logging.getLogger(__name__)
 
-_encoding = tiktoken.get_encoding("cl100k_base")
+_encoding = None
+
+
+def _get_encoding():
+    """Lazy-initialize tiktoken encoding."""
+    global _encoding
+    if _encoding is None:
+        _encoding = tiktoken.get_encoding("cl100k_base")
+    return _encoding
 
 
 def count_tokens(text: str) -> int:
     """Count tokens using tiktoken cl100k_base."""
-    return len(_encoding.encode(text))
+    return len(_get_encoding().encode(text))
 
 
 def count_tokens_by_section(text: str) -> list[tuple[str, int]]:

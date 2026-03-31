@@ -71,9 +71,17 @@ def _discover_in_directory(directory: str) -> list[str]:
     return found
 
 
+MAX_FILE_SIZE = 1_000_000  # 1MB
+
+
 def _load_single_file(filepath: str) -> ContextFile | None:
     """Read a file and create a ContextFile."""
     try:
+        file_size = os.path.getsize(filepath)
+        if file_size > MAX_FILE_SIZE:
+            logger.warning(f"Skipping {filepath}: {file_size:,} bytes exceeds 1MB limit")
+            return None
+
         with open(filepath, encoding="utf-8") as f:
             content = f.read()
 
